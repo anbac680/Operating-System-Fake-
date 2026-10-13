@@ -165,7 +165,6 @@ void DrawMenu()
 
 void CloseMenu()
 {
-    // Engine sở hữu texture nên menu không unload chúng.
     homeIcon = Texture2D{};
     settingsIcon = Texture2D{};
 }
