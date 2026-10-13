@@ -1,12 +1,7 @@
 
-#ifndef ENGINE_H
-#define ENGINE_H
-
-#include "raylib.h"
+#pragma once
 
 void InitEngine();
 void UpdateEngine();
 void DrawEngine();
 void CloseEngine();
-
-#endif

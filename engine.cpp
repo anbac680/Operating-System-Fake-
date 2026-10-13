@@ -1,42 +1,59 @@
-
 #include "engine.h"
+#include "raylib.h"
 #include "menu.h"
+#include "window_manager.h"
 
-Texture2D wallpaper;
-Texture2D homeIcon;
-Texture2D settingsIcon;
+namespace
+{
+    Texture2D wallpaper{};
+    Texture2D homeIcon{};
+    Texture2D settingsIcon{};
+}
 
 void InitEngine()
 {
     InitWindow(1280, 800, "NanoOS");
     SetTargetFPS(60);
 
-    // Load textures after InitWindow()
     wallpaper = LoadTexture("assets/wallpaper.png");
     homeIcon = LoadTexture("assets/home.png");
     settingsIcon = LoadTexture("assets/setting.png");
-
-    InitMenu();
+    InitWindowManager();
+    InitMenu(homeIcon, settingsIcon);
+    OpenNanoWindow(WindowType::Home);
 }
 
 void UpdateEngine()
 {
-    UpdateMenu();
+    const bool menuConsumedClick = UpdateMenu();
+
+    // Vẫn cập nhật animation mỗi frame, nhưng không xử lý
+    // lại cú click mà menu vừa nhận.
+    UpdateWindowManager(!menuConsumedClick);
 }
 
 void DrawEngine()
 {
     BeginDrawing();
 
-    ClearBackground(RAYWHITE);
+    ClearBackground(Color{ 25, 28, 35, 255 });
 
-    // Desktop wallpaper
-    if (IsTextureValid(wallpaper))
+    if (wallpaper.id != 0)
     {
-        DrawTexture(wallpaper, 0, 0, WHITE);
+        DrawTexturePro(
+            wallpaper,
+            { 0.0f, 0.0f,
+              (float)wallpaper.width, (float)wallpaper.height },
+            { 0.0f, 0.0f,
+              (float)GetScreenWidth(), (float)GetScreenHeight() },
+            { 0.0f, 0.0f },
+            0.0f,
+            WHITE
+        );
     }
 
-    // Menu and icons are drawn together
+
+    DrawWindowManager();
     DrawMenu();
 
     EndDrawing();
@@ -45,14 +62,15 @@ void DrawEngine()
 void CloseEngine()
 {
     CloseMenu();
+    CloseWindowManager();
 
-    if (IsTextureValid(wallpaper))
+    if (wallpaper.id != 0)
         UnloadTexture(wallpaper);
 
-    if (IsTextureValid(homeIcon))
+    if (homeIcon.id != 0)
         UnloadTexture(homeIcon);
 
-    if (IsTextureValid(settingsIcon))
+    if (settingsIcon.id != 0)
         UnloadTexture(settingsIcon);
 
     CloseWindow();

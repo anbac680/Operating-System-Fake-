@@ -1,9 +1,13 @@
+
+#include "raylib.h"
 #include "engine.h"
 
-int main() {
+int main()
+{
     InitEngine();
 
-    while (!WindowShouldClose()) {
+    while (!WindowShouldClose())
+    {
         UpdateEngine();
         DrawEngine();
     }

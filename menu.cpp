@@ -1,187 +1,171 @@
 
 #include "menu.h"
-#include "raylib.h"
-#include <cmath>
+#include "window_manager.h"
+#include "animation.h"
 
-extern Texture2D homeIcon;
-extern Texture2D settingsIcon;
-
-static float menuY = 0.0f;
-static float targetY = 0.0f;
-static float startY = 0.0f;
-
-static double animationStart = 0.0;
-static bool animating = false;
-
-static const float BAR_WIDTH = 460.0f;
-static const float BAR_HEIGHT = 64.0f;
-static const float BOTTOM_MARGIN = 16.0f;
-static const float ICON_SIZE = 24.0f;
-
-static bool homeOpen = false;
-static bool settingsOpen = false;
-
-static Rectangle homeRect;
-static Rectangle settingsRect;
-
-void InitMenu()
+namespace
 {
-    float screenH = (float)GetScreenHeight();
+    Texture2D homeIcon{};
+    Texture2D settingsIcon{};
 
-    targetY = screenH - BAR_HEIGHT - BOTTOM_MARGIN;
-    startY = screenH + 10.0f;
-    menuY = startY;
+    float menuY = 0.0f;
+    float menuAnimation = 0.0f;
 
-    animationStart = GetTime();
-    animating = true;
+    constexpr float MENU_WIDTH = 460.0f;
+    constexpr float MENU_HEIGHT = 64.0f;
+
+    Rectangle GetMenuBounds()
+    {
+        return {
+            ((float)GetScreenWidth() - MENU_WIDTH) / 2.0f,
+            menuY,
+            MENU_WIDTH,
+            MENU_HEIGHT
+        };
+    }
+
+    Rectangle GetHomeButton()
+    {
+        const Rectangle bar = GetMenuBounds();
+
+        return {
+            bar.x + 18.0f, bar.y + 12.0f, 52.0f, 40.0f
+        };
+    }
+
+    Rectangle GetSettingsButton()
+    {
+        const Rectangle bar = GetMenuBounds();
+
+        return {
+            bar.x + 78.0f, bar.y + 12.0f, 52.0f, 40.0f
+        };
+    }
 }
 
-void UpdateMenu()
+bool InitMenu(Texture2D home, Texture2D settings)
 {
-    if (animating)
+    homeIcon = home;
+    settingsIcon = settings;
+
+    menuY = (float)GetScreenHeight() + 20.0f;
+    menuAnimation = 0.0f;
+
+    return true;
+}
+
+bool UpdateMenu()
+{
+    const float dt = GetFrameTime();
+
+    menuAnimation += dt * 1.8f;
+
+    if (menuAnimation > 1.0f)
+        menuAnimation = 1.0f;
+
+    const float startY = (float)GetScreenHeight() + 20.0f;
+    const float targetY =
+        (float)GetScreenHeight() - MENU_HEIGHT - 16.0f;
+
+    menuY = startY +
+        (targetY - startY) * EaseOutBack(menuAnimation);
+
+    if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+        return false;
+
+    const Vector2 mouse = GetMousePosition();
+
+    // Chặn cửa sổ phía sau nhận cùng cú click.
+    if (!CheckCollisionPointRec(mouse, GetMenuBounds()))
+        return false;
+
+    if (CheckCollisionPointRec(mouse, GetHomeButton()))
     {
-        float t = (float)((GetTime() - animationStart) / 0.75);
-
-        if (t >= 1.0f)
-        {
-            t = 1.0f;
-            animating = false;
-        }
-
-        if (t < 0.0f)
-            t = 0.0f;
-
-        const float c1 = 1.70158f;
-        const float c3 = c1 + 1.0f;
-
-        float eased = 1.0f
-            + c3 * powf(t - 1.0f, 3.0f)
-            + c1 * powf(t - 1.0f, 2.0f);
-
-        menuY = startY + (targetY - startY) * eased;
+        OpenNanoWindow(WindowType::Home);
+    }
+    else if (CheckCollisionPointRec(mouse, GetSettingsButton()))
+    {
+        OpenNanoWindow(WindowType::Settings);
     }
 
-    float screenW = (float)GetScreenWidth();
-    float barX = (screenW - BAR_WIDTH) / 2.0f;
-    float iconY = menuY + (BAR_HEIGHT - ICON_SIZE) / 2.0f;
-
-    // Click areas move together with the menu.
-    homeRect = {
-        barX + 20.0f, iconY,
-        ICON_SIZE, ICON_SIZE
-    };
-
-    settingsRect = {
-        barX + 80.0f, iconY,
-        ICON_SIZE, ICON_SIZE
-    };
-
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
-    {
-        Vector2 mouse = GetMousePosition();
-
-        if (CheckCollisionPointRec(mouse, homeRect))
-        {
-            homeOpen = !homeOpen;
-            settingsOpen = false;
-        }
-        else if (CheckCollisionPointRec(mouse, settingsRect))
-        {
-            settingsOpen = !settingsOpen;
-            homeOpen = false;
-        }
-    }
+    return true;
 }
 
 void DrawMenu()
 {
-    float screenW = (float)GetScreenWidth();
-    float barX = (screenW - BAR_WIDTH) / 2.0f;
-
-    Rectangle bar = {
-        barX, menuY,
-        BAR_WIDTH, BAR_HEIGHT
-    };
+    const Rectangle bar = GetMenuBounds();
+    const Vector2 mouse = GetMousePosition();
 
     DrawRectangleRounded(
-        {barX, menuY + 5.0f, BAR_WIDTH, BAR_HEIGHT},
-        0.8f, 16, Fade(BLACK, 0.25f)
+        { bar.x, bar.y + 5.0f, bar.width, bar.height },
+        0.35f, 16,
+        Fade(BLACK, 0.18f)
     );
 
     DrawRectangleRounded(
-        bar, 0.8f, 16, Color{35, 35, 48, 235}
+        bar, 0.35f, 16,
+        Color{ 38, 42, 52, 235 }
     );
 
     DrawRectangleRoundedLinesEx(
-        bar, 0.8f, 16, 1.0f, Fade(WHITE, 0.18f)
+        bar, 0.35f, 16, 1.0f,
+        Fade(WHITE, 0.18f)
     );
 
-    if (IsTextureValid(homeIcon))
+    const Rectangle homeButton = GetHomeButton();
+    const Rectangle settingsButton = GetSettingsButton();
+
+    if (CheckCollisionPointRec(mouse, homeButton))
+        DrawRectangleRounded(
+            homeButton, 0.3f, 8, Fade(WHITE, 0.12f)
+        );
+
+    if (CheckCollisionPointRec(mouse, settingsButton))
+        DrawRectangleRounded(
+            settingsButton, 0.3f, 8, Fade(WHITE, 0.12f)
+        );
+
+    if (homeIcon.id != 0 && homeIcon.width > 0)
     {
-        DrawTexturePro(
+        DrawTextureEx(
             homeIcon,
-            {0, 0, (float)homeIcon.width, (float)homeIcon.height},
-            homeRect, {0, 0}, 0, WHITE
+            { homeButton.x + 10.0f, homeButton.y + 4.0f },
+            0.0f, 32.0f / (float)homeIcon.width,
+            WHITE
         );
     }
-
-    if (IsTextureValid(settingsIcon))
+    else
     {
-        DrawTexturePro(
+        DrawText("H", (int)(homeButton.x + 17.0f),
+                 (int)(homeButton.y + 10.0f), 20, WHITE);
+    }
+
+    if (settingsIcon.id != 0 && settingsIcon.width > 0)
+    {
+        DrawTextureEx(
             settingsIcon,
-            {0, 0, (float)settingsIcon.width, (float)settingsIcon.height},
-            settingsRect, {0, 0}, 0, WHITE
+            { settingsButton.x + 10.0f, settingsButton.y + 4.0f },
+            0.0f, 32.0f / (float)settingsIcon.width,
+            WHITE
         );
     }
-
-    // Home window inside NanoOS
-    if (homeOpen)
+    else
     {
-        Rectangle win = {340, 250, 600, 350};
-
-        DrawRectangleRounded(win, 0.04f, 8, Color{240, 240, 245, 255});
-        DrawRectangle(340, 250, 600, 40, Color{45, 45, 60, 255});
-        DrawText("Home", 355, 261, 18, WHITE);
-
-        DrawText("Welcome to NanoOS", 370, 320, 28, DARKGRAY);
-        DrawText("This window is inside the app.", 370, 365, 18, GRAY);
-
-        // Close button
-        Rectangle closeRect = {900, 250, 40, 40};
-        DrawRectangleRec(closeRect, MAROON);
-        DrawText("X", 913, 260, 20, WHITE);
-
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) &&
-            CheckCollisionPointRec(GetMousePosition(), closeRect))
-        {
-            homeOpen = false;
-        }
+        DrawText("S", (int)(settingsButton.x + 17.0f),
+                 (int)(settingsButton.y + 10.0f), 20, WHITE);
     }
 
-    // Settings window inside NanoOS
-    if (settingsOpen)
-    {
-        Rectangle win = {390, 280, 500, 280};
-
-        DrawRectangleRounded(win, 0.04f, 8, Color{240, 240, 245, 255});
-        DrawRectangle(390, 280, 500, 40, Color{45, 45, 60, 255});
-        DrawText("Settings", 405, 291, 18, WHITE);
-
-        DrawText("NanoOS Settings", 420, 345, 24, DARKGRAY);
-        DrawText("Display   |   Appearance", 420, 390, 18, GRAY);
-
-        Rectangle closeRect = {850, 280, 40, 40};
-        DrawRectangleRec(closeRect, MAROON);
-        DrawText("X", 863, 290, 20, WHITE);
-
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) &&
-            CheckCollisionPointRec(GetMousePosition(), closeRect))
-        {
-            settingsOpen = false;
-        }
-    }
+    DrawText(
+        "NanoOS",
+        (int)(bar.x + 150.0f),
+        (int)(bar.y + 23.0f),
+        17, RAYWHITE
+    );
 }
 
 void CloseMenu()
 {
+    // Engine sở hữu texture nên menu không unload chúng.
+    homeIcon = Texture2D{};
+    settingsIcon = Texture2D{};
 }
