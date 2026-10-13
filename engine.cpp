@@ -15,9 +15,9 @@ void InitEngine()
     InitWindow(1280, 800, "NanoOS");
     SetTargetFPS(60);
 
-    wallpaper = LoadTexture("assets/wallpaper.png");
-    homeIcon = LoadTexture("assets/home.png");
-    settingsIcon = LoadTexture("assets/setting.png");
+    wallpaper = LoadTexture("wallpaper.png");
+    homeIcon = LoadTexture("home.png");
+    settingsIcon = LoadTexture("setting.png");
     InitWindowManager();
     InitMenu(homeIcon, settingsIcon);
     OpenNanoWindow(WindowType::Home);
